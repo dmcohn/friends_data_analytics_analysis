@@ -1,0 +1,377 @@
+---
+title: "Friends Data Analytics Analysis"
+author: "David Cohn"
+date: "6/27/2021"
+output: pdf_document
+---
+
+# I: Background
+
+The sitcom Friends, originally airing on NBC from 1994-2004, was one of the most successful 
+TV shows of the 1990's (along with Seinfeld and ER). Even after its original run, Friends
+continues to reach old and new audiences on syndication and streaming, as evidenced by recent
+interest in the Friends Reunion special on HBO Max, starring the original six members of its
+ensemble cast: Jennifer Anniston, Courteney Cox, Lisa Kudrow, Matt LeBlanc, Matthew Perry,
+and David Schwimmer.
+
+Given the significant recent interest in the Friends Reunion show, I wanted to perform
+an analysis to better understand quantitatively how Friends has achieved such sustained
+success over 25+ years and 10 seasons. 
+
+## II: Dataset and Processing
+
+Wikipedia, as part of a summary entry on Friends, compiled publically available season, episode number, title, writer, director,
+original air date and Nielsen viewership data for all 236 episode of Friends across 10 seasons (Link: https://en.wikipedia.org/w/index.php?title=List_of_Friends_episodes&oldid=1029964325); the first 
+nine seasons of Friends generally averaged either 24 or 25 episodes, while the tenth season was an abbreviated
+18 episode season. I compiled this Wikipedia data in a .csv file, and proceeded to split each episode's writer credits
+into a series of columns, with one column per writer. In making an assumption for the following analysis, I treated
+story and teleplay writer credits (if applicable) equally. 
+
+
+```{r, message = FALSE}
+
+# R Packages Used In Analysis
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(lubridate)
+
+```
+
+
+
+```{r, echo = FALSE}
+
+friends.database = read.csv('')
+
+```
+
+
+
+```{r}
+
+friends.database = filter(friends.database, !is.na(Season))
+
+# Remove Quotation Marks from Episode Titles
+friends.database$Title = gsub('"', '', friends.database$Title, fixed = TRUE)
+
+friends.directors = data.frame(unique(friends.database$Director))
+names(friends.directors) = c("Director")
+
+friends.database$Air.Date = as.character(friends.database$Air.Date)
+friends.database$Air.Date = as.Date(friends.database$Air.Date, format = '%m/%d/%y')
+
+friends.database$Season = as.character(friends.database$Season)
+friends.database$Season = factor(friends.database$Season, levels = seq(1, 10))
+
+friends.database$Episode = as.character(friends.database$Episode)
+friends.database$Episode = factor(friends.database$Episode, levels = seq(1, 25))
+
+friends.database = friends.database %>%
+  # Calculate Month of Air Date (with Month Abbreviation Label)
+  mutate(Month = month(Air.Date, label = TRUE)) %>%
+  mutate(Year = year(Air.Date)) %>%
+  mutate(Episode.Number = row.names(friends.database))
+
+friends.database$Month = as.factor(friends.database$Month)
+
+
+```
+
+## III: Analysis
+
+From reading Wikipedia articles on Friends, I learned one of the defining features of Friends' successful original run was its
+ratings/viewership consistency; according to Nielsen Media Research, Friends never ranked below #5 among primetime television
+shows after its first season, while reaching #1 during Season 8 (2001-2002; Link: https://en.wikipedia.org/wiki/Friends).
+
+As such, I began my analysis by examining the overarching season level viewership data for the series. Since TV shows such
+as Friends could have "outlier" viewership numbers for 1 or 2 episodes on account of a season/series premiere or finale,
+specials such as airing directly after the Super Bowl in 1996, and even flashback episodes (which largely re-hash storylines
+from prior episodes), I decided to use the median to perform this analysis, as the median can be more robust than the mean
+to outliers. 
+
+I calculated the median episode by viewership (in millions of viewers) for each season, which is shown in the table below. I also calculated
+the percentage change in viewership from season to season (by its median viewership episode).
+
+```{r}
+
+season.median.viewership.summary = friends.database %>%
+  group_by(Season) %>%
+  summarise(Median.Viewership = median(Viewers))
+
+season.viewership.percentage.change = rep(NA, nrow(season.median.viewership.summary))
+
+# Calculate Percentage Change in Viewership Between "Median" Episodes from Sequential Seasons
+for(i in 2:nrow(season.median.viewership.summary)){
+  season.viewership.percentage.change[i] = (season.median.viewership.summary$Median.Viewership[i] -
+    season.median.viewership.summary$Median.Viewership[i - 1]) / 
+    season.median.viewership.summary$Median.Viewership[i] * 100                    
+}
+
+season.median.viewership.summary = cbind.data.frame(season.median.viewership.summary, 
+    season.viewership.percentage.change)
+
+season.median.viewership.summary = rename(season.median.viewership.summary,
+    Viewership.Percentage.Change = season.viewership.percentage.change)
+
+season.median.viewership.summary$Viewership.Percentage.Change = round(season.median.viewership.summary$Viewership.Percentage.Change,
+    digits = 2)
+
+print(season.median.viewership.summary)
+
+```
+
+The table above confirms the consistency in the Nielsen's rankings data, as Friends was able to sustain a median 22+ million viewers
+each season for 10 years; furthermore, Friends only had one 15% decline in median viewership between seasons (which occured between
+Seasons 2 and 3). This fact highlights Friends' ability to retain its audience.
+
+Taking this analysis one step further, I wanted to investigate how well Friends was able to retain its audience not just between
+seasons, but also intraseason as well (as a 24 episode season spanned nearly 8 months of television.) As such, I calculated
+the median viewership by season episode number across all 10 seasons, as well as the percentage change between sequential medians. 
+
+```{r}
+
+episode.median.viewership.summary = friends.database %>%
+  group_by(Episode) %>%
+  summarise(Median.Viewership = median(Viewers))
+
+episode.viewership.percentage.change = rep(NA, nrow(episode.median.viewership.summary))
+
+# Calculate Percentage Change in Viewership Between Episodes
+for(i in 2:nrow(episode.median.viewership.summary)){
+  episode.viewership.percentage.change[i] = (episode.median.viewership.summary$Median.Viewership[i] -
+    episode.median.viewership.summary$Median.Viewership[i - 1]) / 
+    episode.median.viewership.summary$Median.Viewership[i] * 100                    
+}
+
+episode.median.viewership.summary = cbind.data.frame(episode.median.viewership.summary, 
+    episode.viewership.percentage.change)
+
+episode.median.viewership.summary = rename(episode.median.viewership.summary,
+    Viewership.Percentage.Change = episode.viewership.percentage.change)
+
+episode.median.viewership.summary$Viewership.Percentage.Change = round(episode.median.viewership.summary$Viewership.Percentage.Change,
+                                                                   digits = 2)
+
+median.viewership.by.season.episode.number.barplot = ggplot(episode.median.viewership.summary,
+    aes(x = Episode, y = Median.Viewership)) + geom_bar(stat = "identity", fill = "white",
+        color = "black") + theme(axis.text = element_text(size = 12), 
+        axis.title = element_text(size = 14), plot.title = element_text(hjust = 0.5, size = 16),
+        plot.caption = element_text(size = 12, hjust = 0.5)) + 
+    labs(title = "Friends Median Viewership By Season Episode Number", 
+       x = "Season Episode Number", y = "Median Viewership (Millons)",
+       caption = "Viewership Data Drawn From Wikipedia (Nielsen Data)")
+
+print(median.viewership.by.season.episode.number.barplot)
+
+```
+
+As shown in the barplot above, Friends achieved noticable consistency, irrespective of episode number within a season. While the season
+premiere (Episode #1) and frequent season finale (Episode #24) had slightly higher median viewership, all episode numbers had a median
+viewership total in excess of 20 million. Furthermore, there was only one noteworthy drop in viewers, between Episodes 17 and 18,
+namely as the show would generally be entering its final quarter of episodes for a season (but prior to the finale).
+
+
+```{r}
+
+episode.median.viewership.summary = mutate(episode.median.viewership.summary, 
+  Percentage.Status =  ifelse(Viewership.Percentage.Change >= 0, "Increase", "Decrease"))
+
+episode.median.viewership.summary$Percentage.Status = factor(episode.median.viewership.summary$Percentage.Status,
+    levels = c("Increase", "Decrease"))
+
+median.viewership.by.season.episode.number.dotplot = ggplot(filter(episode.median.viewership.summary,
+  !is.na(Percentage.Status)), aes(x = Episode, y = Viewership.Percentage.Change, 
+    colour = Percentage.Status)) + geom_point(size = 4) + 
+  labs(title = "Viewership Percentage Change By Season Episode Number", 
+       x = "Season Episode Number", y = "Viewership Percentage Change",
+       caption = "Viewership Data Drawn From Wikipedia (Nielsen Data)") +
+  theme(axis.text = element_text(size = 11), 
+        axis.title = element_text(size = 14), 
+        plot.title = element_text(hjust = 0.5, size = 14),
+        legend.text = element_text(size = 11),
+        plot.caption = element_text(size = 12, hjust = 0.5))
+
+print(median.viewership.by.season.episode.number.dotplot)
+
+```
+
+The dot plot above shows the percentage change between median viewership by season episode numbers. From this chart, we see the increase in viewers heading into a season finale (Episodes 23 and 24), while there was only drop of greater than ~10% between Episode 17 and 18 (described above).
+
+
+In seeing the lower viewership numbers, in the aggregate, for Episodes 18-22 of a season, I wanted to next examine whether this decline could possibly be attributed to a seasonal effect (vs possible audience fatigue within a season, or the mechanics of setting up a season finale etc.)
+
+As such, I calculated the median viewership total by month across all 10 seasons of Friends in the following table.
+
+
+```{r}
+
+# Viewership for Median Episode by Month
+month.median.viewership.summary = friends.database %>%
+  group_by(Month) %>%
+  summarise(Median.Viewership = median(Viewers))
+
+
+print(month.median.viewership.summary)
+
+```
+
+This table shows the highest median viewership in September (the month of the season premiere), as well as May (the month of season finale) and January (the start of the calendar year). In turn, while there is a slight dip in median viewership in April (heading into the May finale), the difference is rather small. As such, this result suggests that the fourth quarter dip in ratings could be due to a non-seasonal effect (such as show mechanics), rather than a seasonal one. 
+
+```{r}
+
+viewership.percentage.change = rep(NA, nrow(friends.database))
+
+# Calculate Percentage Change in Viewership Between Episodes
+for(i in 2:nrow(friends.database)){
+  date.one = friends.database$Air.Date[i - 1]
+  date.two = friends.database$Air.Date[i]
+  if(year(date.one) == year(date.two) & month(date.one) == month(date.two) & 
+     day(date.one) == day(date.two)){
+    viewership.percentage.change[i] = ((friends.database$Viewers[i] - 
+      friends.database$Viewers[i - 2]) / friends.database$Viewers[i - 2] * 100)
+  }else{
+    viewership.percentage.change[i] = ((friends.database$Viewers[i] - 
+      friends.database$Viewers[i - 1]) / friends.database$Viewers[i - 1] * 100)
+  }
+}
+
+friends.database = cbind.data.frame(friends.database, viewership.percentage.change)
+
+friends.database$viewership.percentage.change = round(friends.database$viewership.percentage.change,
+                                                      digits = 2)
+
+```
+
+I next calculated the percentage change in viewership for all 236 episodes, and plotted these deltas
+in a density plot.
+
+```{r, warning = FALSE}
+
+viewership.change.density.plot = ggplot(friends.database, 
+  aes(x = viewership.percentage.change)) + 
+  geom_density() + theme(axis.text = element_text(size = 12), 
+       axis.title = element_text(size = 14), 
+       plot.title = element_text(hjust = 0.5, size = 16), 
+       axis.text.y = element_blank(),
+       plot.caption = element_text(size = 12, hjust = 0.5)) + 
+       labs(title = "Median Viewership Percentage Change between Friends Episodes", 
+       x = "Viewership Percentage Change", y = "Density",
+       caption = "Viewership Data Drawn From Wikipedia (Nielsen Data)")
+
+print(viewership.change.density.plot)
+
+```
+
+As shown above, the vast majority of deltas from episode to episode are centered around 0 (confirming prior results), with a very small portion of the distribution showing a greater than 20% decline episode to episode. The distribution is also right-skewed, indicating that Friends did have more significant increases in viewership episode to episode, rather than declines.
+
+```{r}
+
+friends.database$Writer_1 = as.character(friends.database$Writer_1)
+friends.database$Writer_2 = as.character(friends.database$Writer_2)
+friends.database$Writer_3 = as.character(friends.database$Writer_3)
+friends.database$Writer_4 = as.character(friends.database$Writer_4)
+
+# Remove Whitespace from Friends Writer Name strings
+friends.database$Writer_1 = gsub("(^\\s+)|(\\s+$)", "", friends.database$Writer_1)
+friends.database$Writer_2 = gsub("(^\\s+)|(\\s+$)", "", friends.database$Writer_2)
+friends.database$Writer_3 = gsub("(^\\s+)|(\\s+$)", "", friends.database$Writer_3)
+friends.database$Writer_4 = gsub("(^\\s+)|(\\s+$)", "", friends.database$Writer_4)
+
+# Standardize Writing Credit Names
+friends.database$Writer_1 = gsub("Sherry Bilsing-Graham", "Sherry Bilsing", 
+                                 friends.database$Writer_1)
+friends.database$Writer_2 = gsub("Sherry Bilsing-Graham", "Sherry Bilsing", 
+                                 friends.database$Writer_2)
+friends.database$Writer_3 = gsub("Sherry Bilsing-Graham", "Sherry Bilsing", 
+                                 friends.database$Writer_3)
+friends.database$Writer_4 = gsub("Sherry Bilsing-Graham", "Sherry Bilsing", 
+                                 friends.database$Writer_4)
+
+friends.writers = friends.database %>%
+  select(Writer_1, Writer_2, Writer_3, Writer_4) %>%
+  gather(Writer_Position, Writer) %>%
+  select(Writer) %>%
+  filter(Writer != "") %>%
+  unique()
+
+```
+
+After the analyses above, I next looked at the possible effect of director selection on Friends viewership totals. 
+
+```{r}
+
+# Number of Episodes and Median Viewer by Director
+friends.directors.summary.statistics = friends.database %>%
+  group_by(Director) %>%
+  summarise(Episode.Count = n(), Median.Viewers = median(Viewers)) %>%
+  arrange(desc(Median.Viewers)) %>%
+  filter(Episode.Count >= 10)
+
+print(friends.directors.summary.statistics)
+
+```
+
+As shown in the table above, 8 directors directed at least 10 solo episodes over the 236 episode show (Kevin S. Bright and Gary Halvorson also directed one episode jointly). Of these eight directors, Michael Lembeck achieved the highest median viewership in his 24 episodes, followed by Kevin Bright (who along with Marta Kaufmann and David Crane produced Friends). On the other hand, Gary Halvorson, who directed the most episodes of 55 (54 solo, 1 joint), interestingly had the lowest median viewership. 
+
+I next performed a similar analysis for writers and writers' credits. 
+
+```{r}
+
+# Number of Episodes and Median Viewer by Writer (Story and Teleplay Credits)
+friends.writers.summary.statistics = friends.database %>%
+  select(Writer_1, Writer_2, Writer_3, Writer_4, Viewers) %>%
+  gather(Writer_Position, Writer, -Viewers) %>%
+  select(Writer, Viewers) %>%
+  filter(Writer != "") %>%
+  group_by(Writer) %>%
+  summarise(Episode.Count = n(), Median.Viewers = median(Viewers)) %>%
+  arrange(desc(Median.Viewers)) %>%
+  filter(Episode.Count > 10)
+
+print(friends.writers.summary.statistics)
+
+
+```
+Of the sixteen writers with at least 10 writing (story + teleplay) credits during the 10-year show, Alexa Junge had the highest median viewership total for her 12 episodes (followed by show creators David Crane and Marta Kauffman). While there was a slight dip when median viewership was broken down by director, there was no such dip by writer. 
+
+Finally, I wanted to examine all of the variables considered above together for their combined effect on viewership (a quantitative response variable). Since the goal of such analysis is inference rather than prediction, we can utilize a low-variance statistical learning/machine learning model like linear regression. As such, I created a linear regression model, regressing episode viewership across the 236 Friends episodes with Season Number, Episode Number, Director, the Month the episode originally aired, and whether series co-creators David Crane and Marta Kauffman served as writers (as the analysis above indicated that they had written for among the most watched episodes in the series.)
+```{r}
+
+# Features and Response Variable for Linear Regression Model
+friends.linear.regression.features = friends.database %>%
+  # Boolean Indicating Writing Credits for Marta Kauffman and David Crane
+  mutate(Crane.Kauffman.Written.Episode = ifelse(Writer_1 == "David Crane", 
+         "Yes", "No")) %>%
+  select(-Month) %>%
+  mutate(Month = month(Air.Date)) %>%
+  select(Season, Episode, Director, Viewers, Crane.Kauffman.Written.Episode, Month)
+  
+friends.linear.regression.features$Month = factor(friends.linear.regression.features$Month,
+                                                  levels = seq(1, 12))
+
+# Regressing Episode Viewers on list of Features
+friends.linear.regression.model = lm(Viewers ~., 
+      data = friends.linear.regression.features)
+
+# Linear Regression Model Output
+summary(friends.linear.regression.model)
+
+```
+
+The linear regression model summary, as shown above, indicates a statistically significant positive Season 2 effect (at a standard p-value of 0.05) as compared to Season 1 on viewership, while there is a statistically significant negative effect for Season 7 as compared to Season 1 (with no other seasons having statistically significant p-values). Taken together, the results could indicate that positive buzz from a successful first season, coupled with Friends' prominent feature in the post-Super Bowl timeslot, as well as the long sought-after Ross Rachel relationship by fans, all resulted in a significant positive Season 2 effect on viewership when compared to Season 1. Likewise, Season 7 had a significant negative effect; nevertheless, Season 6's coefficient was not statistically signficant, so one long hypothesized explanation for the Season 7 dip (i.e. Season 7's focus on Monica and Chandler's relationship) may not hold. Instead, Season 7 could possibly be explained as an inverse of Season 2, namely a seeming lack of focus on Ross and Rachel's relationship (which sits between Ross and Rachel's divorce in Season 6, and Ross and Rachel's pregnancy in Season 8).
+
+In turn, episodes in the second and fourth quarters of the TV season (Episodes 6-12 and Episodes 18-24) had statistically significant negative coefficients/effects on viewership as compared to season premieres. Furthermore, while May, September, and October's effects on viewership as compared to January were positive, negative, negative, respectively, November, December, March and April's coefficients were not statistically significant. Taken together, this suggests that show mechanics/non-seasonal effects could better explain any dip in viewership, rather than a seasonal effect (such as any potential negative effect of the holidays Thanksgiving or Christmas on viewership). The second and fourth quarters for Friends could be when the writers and producers had to work on character/storyline development to set up a suprise in the middle of the season (such as Ross and Rachel's initial relationship in Season 2 Episode 14) or the end of the season (such as Ross's wedding to Emily, Chandler's proposal and wedding to Monica etc.). 
+
+Finally, with the exception of a positive coefficient/effect for Director Peter Bonerz, the remaining director and writer credit coefficients were not statistically significant. However, one potential limitation of the model is that it represents only ~42% in the variation in viewership(adjusted R^2 value). More specifically, due to a limited number of features available in the Wikipedia dataset (which did not include features that reflect acting performances, elements from the scripts themselves or thematic focuses etc.), there is a lot of information toward understanding Friends viewership numbers that cannot be explained by the features above. Furthermore, director and writers credits do not capture the behind-the-scenes effect that a team of writers, producers and creators had on the show's success. At the same time, the model and analysis can be useful in possibly ruling out possible explanations, or coming up with new hypotheses that could be further explored in further analysis.
+
+
+## IV: Summary
+
+* Friends' viewership was largely consistent both inter-season and intra-season
+* There was a significant bounce in viewership in Season 2 after Season 1 (that cannot be explained by the post Super Bowl episodes alone)
+* Viewership was softer in the fourth quarter of the TV season heading into the season finale (which possibly could be explained by necessary character/storyline development ahead of a surprising/impactful finale)
+* Director/Writing credits did not appear to impact ratings; a better possible explanation of Friends' ratings strength is the team of producers, writers and creators beyond the credits
+* Cast performances undoubtedly had a significant impact on Friends' sustained success (and cannot be quantified in this dataset).
+
+
