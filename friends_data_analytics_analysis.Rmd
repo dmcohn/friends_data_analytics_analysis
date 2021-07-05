@@ -23,7 +23,7 @@ success over 25+ years and 10 seasons.
 Wikipedia, as part of a summary entry on Friends, compiled publically available season, episode number, title, writer, director,
 original air date and Nielsen viewership data for all 236 episode of Friends across 10 seasons (Link: https://en.wikipedia.org/w/index.php?title=List_of_Friends_episodes&oldid=1029964325); the first 
 nine seasons of Friends generally averaged either 24 or 25 episodes, while the tenth season was an abbreviated
-18 episode season. I compiled this Wikipedia data in a .csv file, and proceeded to split each episode's writer credits
+18 episode season. In addition, IMDB has publically available viewer ratings data for each Friend episode (Link: https://www.imdb.com/title/tt0108778/?ref_=tt_ov_inf), based on a 1-10 scale. I compiled this Wikipedia and IMDB data in a .csv file, and proceeded to split each episode's writer credits
 into a series of columns, with one column per writer. In making an assumption for the following analysis, I treated
 story and teleplay writer credits (if applicable) equally. 
 
@@ -125,7 +125,25 @@ The table above confirms the consistency in the Nielsen's rankings data, as Frie
 each season for 10 years; furthermore, Friends only had one 15% decline in median viewership between seasons (which occured between
 Seasons 2 and 3). This fact highlights Friends' ability to retain its audience.
 
-Taking this analysis one step further, I wanted to investigate how well Friends was able to retain its audience not just between
+```{r}
+
+season.imdb.rating.summary = friends.database %>%
+  group_by(Season) %>%
+  summarise(Median.IMDB.Rating = median(IMDB_Rating), 
+            Twenty.Fifth.Percentile = quantile(IMDB_Rating, probs = 0.25),
+            Seventy.Fifth.Percentile = quantile(IMDB_Rating, probs = 0.75)) %>%
+  select(Season, Twenty.Fifth.Percentile, Median.IMDB.Rating, Seventy.Fifth.Percentile)
+
+print(season.imdb.rating.summary)
+
+```
+
+To see whether such consistency extended to viewer reception as well, I calculated the interquartile range (25th percentile, 50th percentile or median, and 75th percentile) of IMDB scores by season. Although the IMDB data is not retrospective like the Nielsen data (from the orginial air dates), this data gives an idea of how audiences (both current and past) might have reacted to each episode.
+
+The interquartile IMDB data by season is shown above, where there is basically no difference in IMDB score by season, with all seasons posting strong 8+ scores out of 10.
+
+
+Taking this analysis one step further, I wanted to investigate how well Friends was able to retain its audience/viewership acclaim not just between
 seasons, but also intraseason as well (as a 24 episode season spanned nearly 8 months of television.) As such, I calculated
 the median viewership by season episode number across all 10 seasons, as well as the percentage change between sequential medians. 
 
@@ -174,6 +192,26 @@ namely as the show would generally be entering its final quarter of episodes for
 
 ```{r}
 
+IMDB.rating.by.season.episode.number.boxplot = ggplot(friends.database,
+    aes(x = Episode, y = IMDB_Rating)) + geom_boxplot(fill = "white",
+        color = "black") + theme(axis.text = element_text(size = 12), 
+        axis.title = element_text(size = 14), 
+        plot.title = element_text(hjust = 0.5, size = 16),
+        plot.caption = element_text(size = 12, hjust = 0.5)) + 
+    labs(title = "Friends IMDB Rating Boxplot By Season Episode Number", 
+       x = "Season Episode Number", y = "IMDB Rating") + 
+   scale_y_continuous(breaks = seq(6, 10, 0.5))
+
+print(IMDB.rating.by.season.episode.number.boxplot)
+
+```
+
+Similarly, the boxplot of IMDB data by season episode number shows season finales (Episodes 23-25) were the most critically acclaimed
+among audiences, while Episodes 19-22 had a slight drop in median ratings; this is consisent with the viewership finding for these episodes, and suggests that a possible explanation for the slight drop in viewership was the fact that those episodes (leading into the finale) were not as well received by audiences.
+
+
+```{r}
+
 episode.median.viewership.summary = mutate(episode.median.viewership.summary, 
   Percentage.Status =  ifelse(Viewership.Percentage.Change >= 0, "Increase", "Decrease"))
 
@@ -199,7 +237,7 @@ print(median.viewership.by.season.episode.number.dotplot)
 The dot plot above shows the percentage change between median viewership by season episode numbers. From this chart, we see the increase in viewers heading into a season finale (Episodes 23 and 24), while there was only drop of greater than ~10% between Episode 17 and 18 (described above).
 
 
-In seeing the lower viewership numbers, in the aggregate, for Episodes 18-22 of a season, I wanted to next examine whether this decline could possibly be attributed to a seasonal effect (vs possible audience fatigue within a season, or the mechanics of setting up a season finale etc.)
+In seeing the lower viewership numbers, in the aggregate, for Episodes 18-22 of a season, I wanted to next examine whether this decline could also possibly be attributed to a seasonal effect (vs audience reception from the IMDB data).
 
 As such, I calculated the median viewership total by month across all 10 seasons of Friends in the following table.
 
@@ -216,7 +254,7 @@ print(month.median.viewership.summary)
 
 ```
 
-This table shows the highest median viewership in September (the month of the season premiere), as well as May (the month of season finale) and January (the start of the calendar year). In turn, while there is a slight dip in median viewership in April (heading into the May finale), the difference is rather small. As such, this result suggests that the fourth quarter dip in ratings could be due to a non-seasonal effect (such as show mechanics), rather than a seasonal one. 
+This table shows the highest median viewership in September (the month of the season premiere), as well as May (the month of season finale) and January (the start of the calendar year). In turn, while there is a slight dip in median viewership in April (heading into the May finale), the difference is rather small. As such, this result further suggests that the fourth quarter dip in ratings could be due to a non-seasonal effect (such as show mechanics/audience reception), rather than a seasonal one. 
 
 ```{r}
 
@@ -265,6 +303,26 @@ print(viewership.change.density.plot)
 
 As shown above, the vast majority of deltas from episode to episode are centered around 0 (confirming prior results), with a very small portion of the distribution showing a greater than 20% decline episode to episode. The distribution is also right-skewed, indicating that Friends did have more significant increases in viewership episode to episode, rather than declines.
 
+
+```{r}
+
+IMDB.rating.density.plot = ggplot(friends.database, 
+  aes(x = IMDB_Rating)) + 
+  geom_density() + theme(axis.text = element_text(size = 12), 
+       axis.title = element_text(size = 14), 
+       plot.title = element_text(hjust = 0.5, size = 16), 
+       axis.text.y = element_blank(),
+       plot.caption = element_text(size = 12, hjust = 0.5)) + 
+       labs(title = "IMDB Rating Density Plot", 
+       x = "IMDB Rating", y = "Density") + scale_x_continuous(breaks = seq(6, 10, 0.5))
+
+print(IMDB.rating.density.plot)
+
+```
+
+I also calculated a density plot of IMDB scores across all 236 episodes. This density plot shows the modal IMDB Rating for an episode as being ~8.2; this density curve is also right skewed from the mode, indicating a larger number of episodes with even higher acclaim from audiences (IMDB Ratings of 9+) than less critically successful shows. 
+
+
 ```{r}
 
 friends.database$Writer_1 = as.character(friends.database$Writer_1)
@@ -297,14 +355,15 @@ friends.writers = friends.database %>%
 
 ```
 
-After the analyses above, I next looked at the possible effect of director selection on Friends viewership totals. 
+After the analyses above, I next looked at the possible effect of director selection on Friends viewership totals and IMDB Ratings. 
 
 ```{r}
 
 # Number of Episodes and Median Viewer by Director
 friends.directors.summary.statistics = friends.database %>%
   group_by(Director) %>%
-  summarise(Episode.Count = n(), Median.Viewers = median(Viewers)) %>%
+  summarise(Episode.Count = n(), Median.Viewers = median(Viewers), 
+            Median.IMDB.Rating = median(IMDB_Rating)) %>%
   arrange(desc(Median.Viewers)) %>%
   filter(Episode.Count >= 10)
 
@@ -312,7 +371,7 @@ print(friends.directors.summary.statistics)
 
 ```
 
-As shown in the table above, 8 directors directed at least 10 solo episodes over the 236 episode show (Kevin S. Bright and Gary Halvorson also directed one episode jointly). Of these eight directors, Michael Lembeck achieved the highest median viewership in his 24 episodes, followed by Kevin Bright (who along with Marta Kaufmann and David Crane produced Friends). On the other hand, Gary Halvorson, who directed the most episodes of 55 (54 solo, 1 joint), interestingly had the lowest median viewership. 
+As shown in the table above, 8 directors directed at least 10 solo episodes over the 236 episode show (Kevin S. Bright and Gary Halvorson also directed one episode jointly). Of these eight directors, Michael Lembeck achieved the highest median viewership in his 24 episodes, followed by Kevin Bright (who along with Marta Kaufmann and David Crane produced Friends). On the other hand, Gary Halvorson, who directed the most episodes of 55 (54 solo, 1 joint), interestingly had the lowest median viewership. In addition, while the margins between median IMDB ratings are very small, there is appears to be at least a bit of a correlation between median viewership and median IMDB rating (i.e. audience reception moving lower with viewership and vice-versa by director).
 
 I next performed a similar analysis for writers and writers' credits. 
 
@@ -320,12 +379,13 @@ I next performed a similar analysis for writers and writers' credits.
 
 # Number of Episodes and Median Viewer by Writer (Story and Teleplay Credits)
 friends.writers.summary.statistics = friends.database %>%
-  select(Writer_1, Writer_2, Writer_3, Writer_4, Viewers) %>%
-  gather(Writer_Position, Writer, -Viewers) %>%
-  select(Writer, Viewers) %>%
+  select(Writer_1, Writer_2, Writer_3, Writer_4, Viewers, IMDB_Rating) %>%
+  gather(Writer_Position, Writer, -Viewers, -IMDB_Rating) %>%
+  select(Writer, Viewers, IMDB_Rating) %>%
   filter(Writer != "") %>%
   group_by(Writer) %>%
-  summarise(Episode.Count = n(), Median.Viewers = median(Viewers)) %>%
+  summarise(Episode.Count = n(), Median.Viewers = median(Viewers), 
+            Median.IMDB.Rating = median(IMDB_Rating)) %>%
   arrange(desc(Median.Viewers)) %>%
   filter(Episode.Count > 10)
 
@@ -333,9 +393,10 @@ print(friends.writers.summary.statistics)
 
 
 ```
-Of the sixteen writers with at least 10 writing (story + teleplay) credits during the 10-year show, Alexa Junge had the highest median viewership total for her 12 episodes (followed by show creators David Crane and Marta Kauffman). While there was a slight dip when median viewership was broken down by director, there was no such dip by writer. 
+Of the sixteen writers with at least 10 writing (story + teleplay) credits during the 10-year show, Alexa Junge had the highest median viewership total for her 12 episodes (followed by show creators David Crane and Marta Kauffman). While there was a slight dip when median viewership was broken down by director, there was no such dip by writer. Furthermore, there is no evidence of correlation between median viewership and median IMDB rating by writer. Of note, show creators David Crane and Marta Kauffman had the highest median IMDB scores for their episodes from audiences. 
 
-Finally, I wanted to examine all of the variables considered above together for their combined effect on viewership (a quantitative response variable). Since the goal of such analysis is inference rather than prediction, we can utilize a low-variance statistical learning/machine learning model like linear regression. As such, I created a linear regression model, regressing episode viewership across the 236 Friends episodes with Season Number, Episode Number, Director, the Month the episode originally aired, and whether series co-creators David Crane and Marta Kauffman served as writers (as the analysis above indicated that they had written for among the most watched episodes in the series.)
+
+Finally, I wanted to examine all of the variables considered above together for their combined effect on viewership (a quantitative response variable). Since the goal of such analysis is inference rather than prediction, we can utilize a low-variance statistical learning/machine learning model like linear regression. As such, I created a linear regression model, regressing episode viewership across the 236 Friends episodes with Season Number, Episode Number, Director, the Month the episode originally aired, and whether series co-creators David Crane and Marta Kauffman served as writers (as the analysis above indicated that they had written for among the most watched episodes in the series, and critically acclaimed episodes by audiences.)
 ```{r}
 
 # Features and Response Variable for Linear Regression Model
@@ -363,15 +424,13 @@ The linear regression model summary, as shown above, indicates a statistically s
 
 In turn, episodes in the second and fourth quarters of the TV season (Episodes 6-12 and Episodes 18-24) had statistically significant negative coefficients/effects on viewership as compared to season premieres. Furthermore, while May, September, and October's effects on viewership as compared to January were positive, negative, negative, respectively, November, December, March and April's coefficients were not statistically significant. Taken together, this suggests that show mechanics/non-seasonal effects could better explain any dip in viewership, rather than a seasonal effect (such as any potential negative effect of the holidays Thanksgiving or Christmas on viewership). The second and fourth quarters for Friends could be when the writers and producers had to work on character/storyline development to set up a suprise in the middle of the season (such as Ross and Rachel's initial relationship in Season 2 Episode 14) or the end of the season (such as Ross's wedding to Emily, Chandler's proposal and wedding to Monica etc.). 
 
-Finally, with the exception of a positive coefficient/effect for Director Peter Bonerz, the remaining director and writer credit coefficients were not statistically significant. However, one potential limitation of the model is that it represents only ~42% in the variation in viewership(adjusted R^2 value). More specifically, due to a limited number of features available in the Wikipedia dataset (which did not include features that reflect acting performances, elements from the scripts themselves or thematic focuses etc.), there is a lot of information toward understanding Friends viewership numbers that cannot be explained by the features above. Furthermore, director and writers credits do not capture the behind-the-scenes effect that a team of writers, producers and creators had on the show's success. At the same time, the model and analysis can be useful in possibly ruling out possible explanations, or coming up with new hypotheses that could be further explored in further analysis.
+Finally, with the exception of a positive coefficient/effect for Director Peter Bonerz, the remaining director and writer credit coefficients were not statistically significant. However, one potential limitation of the model is that it represents only ~42% in the variation in viewership (adjusted R^2 value). More specifically, due to a limited number of features available in the Wikipedia dataset (which did not include features that reflect acting performances, elements from the scripts themselves or thematic focuses etc.), there is a lot of information toward understanding Friends viewership numbers that cannot be explained by the features above. Furthermore, director and writers credits do not capture the behind-the-scenes effect that a team of writers, producers and creators had on the show's success. At the same time, the model and analysis can be useful in possibly ruling out possible explanations, or coming up with new hypotheses that could be further explored in further analysis.
 
 
 ## IV: Summary
 
-* Friends' viewership was largely consistent both inter-season and intra-season
+* Friends' viewership and audience reception (IMDB rating) was largely consistent both inter-season and intra-season
 * There was a significant bounce in viewership in Season 2 after Season 1 (that cannot be explained by the post Super Bowl episodes alone)
-* Viewership was softer in the fourth quarter of the TV season heading into the season finale (which possibly could be explained by necessary character/storyline development ahead of a surprising/impactful finale)
+* Viewership and audience reception was softer in the fourth quarter of the TV season heading into the season finale (which possibly could be explained by necessary character/storyline development ahead of a surprising/impactful finale)
 * Director/Writing credits did not appear to impact ratings; a better possible explanation of Friends' ratings strength is the team of producers, writers and creators beyond the credits
 * Cast performances undoubtedly had a significant impact on Friends' sustained success (and cannot be quantified in this dataset).
-
-
