@@ -52,6 +52,8 @@ friends.database = read.csv('')
 
 friends.database = filter(friends.database, !is.na(Season))
 
+friends.database = rename(friends.database, Air.Date = Air_Date)
+
 # Remove Quotation Marks from Episode Titles
 friends.database$Title = gsub('"', '', friends.database$Title, fixed = TRUE)
 
@@ -105,7 +107,7 @@ season.viewership.percentage.change = rep(NA, nrow(season.median.viewership.summ
 for(i in 2:nrow(season.median.viewership.summary)){
   season.viewership.percentage.change[i] = (season.median.viewership.summary$Median.Viewership[i] -
     season.median.viewership.summary$Median.Viewership[i - 1]) / 
-    season.median.viewership.summary$Median.Viewership[i] * 100                    
+    season.median.viewership.summary$Median.Viewership[i - 1] * 100                    
 }
 
 season.median.viewership.summary = cbind.data.frame(season.median.viewership.summary, 
@@ -122,8 +124,8 @@ print(season.median.viewership.summary)
 ```
 
 The table above confirms the consistency in the Nielsen's rankings data, as Friends was able to sustain a median 22+ million viewers
-each season for 10 years; furthermore, Friends only had one 15% decline in median viewership between seasons (which occured between
-Seasons 2 and 3). This fact highlights Friends' ability to retain its audience.
+each season for 10 years; furthermore, Friends had only two 10+% declines in median viewership between seasons (which occured between
+Seasons 2 and 3, and Seasons 5 and 6). This fact highlights Friends' ability to retain its audience.
 
 ```{r}
 
@@ -159,7 +161,7 @@ episode.viewership.percentage.change = rep(NA, nrow(episode.median.viewership.su
 for(i in 2:nrow(episode.median.viewership.summary)){
   episode.viewership.percentage.change[i] = (episode.median.viewership.summary$Median.Viewership[i] -
     episode.median.viewership.summary$Median.Viewership[i - 1]) / 
-    episode.median.viewership.summary$Median.Viewership[i] * 100                    
+    episode.median.viewership.summary$Median.Viewership[i - 1] * 100                    
 }
 
 episode.median.viewership.summary = cbind.data.frame(episode.median.viewership.summary, 
@@ -206,8 +208,8 @@ print(IMDB.rating.by.season.episode.number.boxplot)
 
 ```
 
-Similarly, the boxplot of IMDB data by season episode number shows season finales (Episodes 23-25) were the most critically acclaimed
-among audiences, while Episodes 19-22 had a slight drop in median ratings; this is consisent with the viewership finding for these episodes, and suggests that a possible explanation for the slight drop in viewership was the fact that those episodes (leading into the finale) were not as well received by audiences.
+Similarly, the boxplot of IMDB data by season episode number shows season finales (Episodes 23-25) were generally the most critically acclaimed
+among audiences, while Episodes 18-22 had a slight drop in median scores; this is consisent with the viewership finding for these episodes, and suggests that a possible explanation for the slight drop in viewership was the fact that those episodes (leading into the finale) were not as well received by audiences.
 
 
 ```{r}
@@ -293,7 +295,7 @@ viewership.change.density.plot = ggplot(friends.database,
        plot.title = element_text(hjust = 0.5, size = 16), 
        axis.text.y = element_blank(),
        plot.caption = element_text(size = 12, hjust = 0.5)) + 
-       labs(title = "Median Viewership Percentage Change between Friends Episodes", 
+       labs(title = "Median Viewership Percentage Change between Episodes", 
        x = "Viewership Percentage Change", y = "Density",
        caption = "Viewership Data Drawn From Wikipedia (Nielsen Data)")
 
@@ -371,7 +373,7 @@ print(friends.directors.summary.statistics)
 
 ```
 
-As shown in the table above, 8 directors directed at least 10 solo episodes over the 236 episode show (Kevin S. Bright and Gary Halvorson also directed one episode jointly). Of these eight directors, Michael Lembeck achieved the highest median viewership in his 24 episodes, followed by Kevin Bright (who along with Marta Kaufmann and David Crane produced Friends). On the other hand, Gary Halvorson, who directed the most episodes of 55 (54 solo, 1 joint), interestingly had the lowest median viewership. In addition, while the margins between median IMDB ratings are very small, there is appears to be at least a bit of a correlation between median viewership and median IMDB rating (i.e. audience reception moving lower with viewership and vice-versa by director).
+As shown in the table above, 8 directors directed at least 10 solo episodes over the 236 episode show (Kevin S. Bright and Gary Halvorson also directed one episode jointly). Of these eight directors, Michael Lembeck achieved the highest median viewership in his 24 episodes, followed by Kevin Bright (who along with Marta Kaufmann and David Crane produced Friends). On the other hand, Gary Halvorson, who directed the most episodes of 55 (54 solo, 1 joint), interestingly had the lowest median viewership. In addition, while the margins between median IMDB ratings are very small, there appears to be at least a bit of a correlation between median viewership and median IMDB rating (i.e. audience reception moving lower with viewership and vice-versa by director).
 
 I next performed a similar analysis for writers and writers' credits. 
 
